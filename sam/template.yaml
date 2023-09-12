@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam example
+
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  BucketName:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "sam-example-${AWS::AccountId}-${AWS::Region}"
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: hello-world/
+      Handler: main
+      Runtime: go1.x
+      Architectures:
+        - x86_64
+      Timeout: 10
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - S3ReadPolicy:
+            BucketName: !Ref BucketName
+
+Outputs:
+  HelloWorldFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt HelloWorldFunction.Arn

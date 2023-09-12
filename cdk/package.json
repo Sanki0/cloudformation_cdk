@@ -8,7 +8,9 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "cdk:diff": "cdk diff",
+    "deploy": "export $(cat .env | xargs) && cdk deploy"
   },
   "devDependencies": {
     "@types/jest": "^29.5.4",
