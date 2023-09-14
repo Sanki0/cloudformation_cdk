@@ -3,12 +3,8 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   sam example
 
-Globals:
-  Function:
-    Timeout: 3
-
 Resources:
-  BucketName:
+  Bucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub "sam-example-${AWS::AccountId}-${AWS::Region}"
@@ -31,7 +27,7 @@ Resources:
       Policies:
         - AWSLambdaBasicExecutionRole
         - S3ReadPolicy:
-            BucketName: !Ref BucketName
+            BucketName: !Ref Bucket
 
 Outputs:
   HelloWorldFunction:
