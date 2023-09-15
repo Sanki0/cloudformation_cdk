@@ -23,6 +23,21 @@ export class CdkStack extends cdk.Stack {
       handler: 'main',
     });
 
+    // array of several lambdas to deploy
+    const lambdas = [{ name: 'lambda1', code: '../assets/hello-world' },
+    { name: 'lambda2', code: '../assets/hello-world' },
+    { name: 'lambda3', code: '../assets/hello-world' }]
+
+    lambdas.forEach((lambda) => {
+      new cdk.aws_lambda.Function(this, lambda.name, {
+        runtime: cdk.aws_lambda.Runtime.PROVIDED_AL2,
+        functionName: lambda.name,
+        code: cdk.aws_lambda.Code.fromAsset(path.join(__dirname, lambda.code)),
+        handler: 'main',
+      });
+      console.log(lambda.name + " deployed");
+    });
+
     const appsyncGraphqlApi = new appsync.GraphqlApi(this, `cdk-appsync`, {
       name: `cdk-appsync`,
       schema: appsync.SchemaFile.fromAsset(path.join(__dirname, "../assets/schema/schema.graphql")),
