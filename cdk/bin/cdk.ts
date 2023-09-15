@@ -5,7 +5,6 @@ import { CdkStack } from '../lib/cdk-stack';
 
 const cdk_env: any = {};
 Object.keys(process.env)
-  .filter((k) => k.startsWith("CDK_PARAM"))
   .map((k) => (cdk_env[k] = process.env[k]));
 
 const app = new cdk.App();
