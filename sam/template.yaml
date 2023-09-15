@@ -4,6 +4,100 @@ Description: >
   sam example
 
 Resources:
+  AppSyncServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - appsync.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowAccessForAppsyncResolvers
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartSyncExecution #Type: Express
+                Resource:
+                  - !Ref SAMStateMachine
+
+  AppSyncApi:
+    DependsOn: AppSyncServiceRole
+    Type: AWS::AppSync::GraphQLApi
+    Properties:
+      Name: sam-appsync
+      AuthenticationType: API_KEY
+
+  # API Key for external access
+  AppSyncApiKey:
+    Type: AWS::AppSync::ApiKey
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+
+  # GraphQL Schema
+  AppSyncSchema:
+    Type: AWS::AppSync::GraphQLSchema
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      DefinitionS3Location: "./schema.graphql"
+
+  StepFunctionsHttpDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      Name: StepFunctionsHttpDataSource
+      Description: Step Functions HTTP
+      Type: HTTP
+      ServiceRoleArn: !GetAtt AppSyncServiceRole.Arn
+      HttpConfig:
+        Endpoint: !Sub https://sync-states.${AWS::Region}.amazonaws.com/
+        AuthorizationConfig:
+          AuthorizationType: AWS_IAM
+          AwsIamConfig:
+            SigningRegion: !Ref AWS::Region
+            SigningServiceName: states
+
+  # Step Functions HTTP Resolver
+  StepFunctionsHttpResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: AppSyncSchema
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      DataSourceName: !GetAtt StepFunctionsHttpDataSource.Name
+      FieldName: stepFunctionsHttp
+      TypeName: Mutation
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "method": "POST",
+          "resourcePath": "/",
+          "params": {
+            "headers": {
+              "Content-Type": "application/x-amz-json-1.0",
+              "x-amz-target": "AWSStepFunctions.StartSyncExecution"
+            },
+            "body": {
+              "stateMachineArn": "${SAMStateMachine}",
+              "input": "{ \"name\": \"${ctx.args.name}\", \"input\": \"${ctx.args.input}\"}"
+            }
+          }
+        }
+      ResponseMappingTemplate: |
+        $util.toJson($ctx.result)
+
+  SAMStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachines/sam.asl.json
+      Type: EXPRESS
+      Name: sam-state-machine
+
   Bucket:
     Type: AWS::S3::Bucket
     Properties:
